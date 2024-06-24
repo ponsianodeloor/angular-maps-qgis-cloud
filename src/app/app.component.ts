@@ -14,6 +14,7 @@ import View from 'ol/View';
 export class AppComponent implements OnInit {
   title = 'maps-qgis-cloud';
   map: ol.Map | undefined;
+  featureInfo: any;
 
   ngOnInit() {
     this.map = new ol.Map({
@@ -24,10 +25,10 @@ export class AppComponent implements OnInit {
         }),
         new TileLayer({
           source: new TileWMS({
-            url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena',
+            url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena/wms',
             params: {'LAYERS': 'marcelino_mariduena', 'TILED': true},
             serverType: 'qgis',
-            crossOrigin: 'anonymous'
+            crossOrigin: 'anonymous',
           })
         })
       ],
@@ -37,5 +38,43 @@ export class AppComponent implements OnInit {
         zoom: 10 // Adjust zoom level as needed
       })
     });
+
+    this.map.on('click', this.onMapClick.bind(this));
   }
+
+  // add a method to handle the map's click event
+  onMapClick(event: any) {
+    if (this.map && event) {
+      let viewResolution = this.map.getView().getResolution();
+      if (viewResolution === undefined) {
+        viewResolution = 1; // Set a default value or handle the error
+      }
+      const coordinate = event.coordinate;
+      this.map.getLayers().getArray().forEach((layer) => {
+        if (layer instanceof TileLayer) {
+          const wmsSource = layer.getSource();
+          if (wmsSource instanceof TileWMS) {
+            const url = wmsSource.getFeatureInfoUrl(
+              coordinate,
+              viewResolution,
+              'EPSG:3857',
+              {'INFO_FORMAT': 'application/json'}
+            );
+            if (url) {
+              fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                  this.featureInfo = data;
+                });
+            }
+          }
+        }
+      });
+    } else {
+      console.log('Map or event is undefined');
+    }
+  }
+
+
+
 }
