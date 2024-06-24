@@ -20,16 +20,16 @@ export class AppComponent implements OnInit {
       target: 'map',
       layers: [
         new TileLayer({
+          source: new OSM() // This adds the OpenStreetMap layer
+        }),
+        new TileLayer({
           source: new TileWMS({
             url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena',
             params: {'LAYERS': 'marcelino_mariduena', 'TILED': true},
             serverType: 'qgis',
             crossOrigin: 'anonymous'
           })
-        }),
-        new TileLayer({
-          source: new OSM() // This adds the OpenStreetMap layer
-        }),
+        })
       ],
       view: new View({
         projection: 'EPSG:3857',
