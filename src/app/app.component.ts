@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
-import * as ol from 'ol';
 import {fromLonLat} from 'ol/proj';
+import * as ol from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
 import OSM from 'ol/source/OSM';
@@ -13,8 +13,27 @@ import View from 'ol/View';
 })
 export class AppComponent implements OnInit {
   title = 'maps-qgis-cloud';
-  map: ol.Map | undefined;
+  //map: ol.Map | undefined;
   featureInfo: any;
+
+  wmsSource = new TileWMS({
+    url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena/wms',
+    params: {'LAYERS': 'marcelino_mariduena', 'TILED': true},
+    serverType: 'qgis',
+    crossOrigin: 'anonymous',
+  });
+
+  wmsLayer = new TileLayer({
+    source: this.wmsSource
+  });
+
+  view = new View({
+    projection: 'EPSG:3857',
+    center: fromLonLat([-79.4037, -2.2995]), // Replace with your map's center coordinates
+    zoom: 10 // Adjust zoom level as needed
+  });
+
+  map: ol.Map = new ol.Map({});
 
   ngOnInit() {
     this.map = new ol.Map({
@@ -23,58 +42,37 @@ export class AppComponent implements OnInit {
         new TileLayer({
           source: new OSM() // This adds the OpenStreetMap layer
         }),
-        new TileLayer({
-          source: new TileWMS({
-            url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena/wms',
-            params: {'LAYERS': 'marcelino_mariduena', 'TILED': true},
-            serverType: 'qgis',
-            crossOrigin: 'anonymous',
-          })
-        })
+        this.wmsLayer
       ],
-      view: new View({
-        projection: 'EPSG:3857',
-        center: fromLonLat([-79.4037, -2.2995]), // Replace with your map's center coordinates
-        zoom: 10 // Adjust zoom level as needed
-      })
+      view: this.view
     });
 
     this.map.on('click', this.onMapClick.bind(this));
   }
 
   // add a method to handle the map's click event
-  onMapClick(event: any) {
-    if (this.map && event) {
-      let viewResolution = this.map.getView().getResolution();
-      if (viewResolution === undefined) {
-        viewResolution = 1; // Set a default value or handle the error
+  onMapClick():void {
+    this.map?.on('singleclick', (evt:ol.MapBrowserEvent<any>) => {
+      const viewResolution = /** @type {number} */ (this.view.getResolution());
+      let url;
+      if (typeof viewResolution === "number") {
+        url = this.wmsSource.getFeatureInfoUrl(
+          evt.coordinate,
+          viewResolution,
+          'EPSG:3857',
+          {'INFO_FORMAT': 'text/html'},
+        );
       }
-      const coordinate = event.coordinate;
-      this.map.getLayers().getArray().forEach((layer) => {
-        if (layer instanceof TileLayer) {
-          const wmsSource = layer.getSource();
-          if (wmsSource instanceof TileWMS) {
-            const url = wmsSource.getFeatureInfoUrl(
-              coordinate,
-              viewResolution,
-              'EPSG:3857',
-              {'INFO_FORMAT': 'application/json'}
-            );
-            if (url) {
-              fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                  this.featureInfo = data;
-                });
-            }
-          }
-        }
-      });
-    } else {
-      console.log('Map or event is undefined');
-    }
+      if (url) {
+        fetch(url)
+          .then((response) => response.text())
+          .then((html) => {
+            console.log(html);
+            this.featureInfo = html;
+          });
+      }
+    });
+
   }
-
-
 
 }
