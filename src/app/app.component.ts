@@ -18,7 +18,9 @@ export class AppComponent implements OnInit {
 
   wmsSource = new TileWMS({
     url: 'https://qgiscloud.com/ponsianodeloor/marcelino_mariduena/wms',
-    params: {'LAYERS': 'marcelino_mariduena', 'TILED': true},
+    params: {
+      'LAYERS': 'marcelino_mariduena,zonas', 'TILED': true
+    },
     serverType: 'qgis',
     crossOrigin: 'anonymous',
   });
