@@ -69,12 +69,62 @@ export class AppComponent implements OnInit {
         fetch(url)
           .then((response) => response.text())
           .then((html) => {
-            console.log(html);
-            this.featureInfo = html;
+            //console.log(html);
+            //this.featureInfo = doc.body.innerHTML;
+
+            const parser = new DOMParser();
+            let doc = parser.parseFromString(html, 'text/html');
+
+            console.log(doc.body.innerHTML);
+
+            const tables = doc.querySelectorAll('table');
+
+            let marcelinoData: any = {};
+            let zonasData: any = {};
+
+            for (let i = 0; i < tables.length; i++) {
+              const table = tables[i];
+              const layerRow = table.querySelector('tr');
+              if (layerRow) {
+                const layerName = layerRow.querySelector('td')?.textContent?.trim();
+                if (layerName === 'marcelino_mariduena') {
+                  const dataTable = tables[i + 1]; // The next table contains the data
+                  marcelinoData = this.extractTableData(dataTable, ['id', 'area', 'nombre', 'codigo']);
+                  i++; // Skip the next table as it has been processed
+                } else if (layerName === 'zonas') {
+                  const dataTable = tables[i + 1]; // The next table contains the data
+                  zonasData = this.extractTableData(dataTable, ['id', 'zona', 'cod_cat']);
+                  i++; // Skip the next table as it has been processed
+                }
+              }
+            }
+
+            console.log('marcelino_mariduena Data:', marcelinoData);
+            console.log('zonas Data:', zonasData);
+
           });
       }
     });
-
   }
+
+  extractTableData(table: HTMLTableElement, fields: string[]): any {
+    const data: any = {};
+    const rows = table.querySelectorAll('tr');
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('th, td');
+      if (cells.length === 2) {
+        const key = cells[0].textContent?.trim();
+        const value = cells[1].textContent?.trim();
+        if (key && fields.includes(key)) {
+          data[key] = value;
+        }
+      }
+    });
+
+    return data;
+  }
+
+
 
 }
